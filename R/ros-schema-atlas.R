@@ -2,8 +2,20 @@
 
 # ROS 4.0.0 configuration ----
 
-library(data.table)
-library(stringr)
+#' ROS database metadata and documentation
+#'
+#' Extract metadata, apply database comments and generate documentation for ROS 4.0.0.
+#' @import data.table
+#' @importFrom stringr str_length
+#' @importFrom stats setNames
+#' @keywords internal
+"_PACKAGE"
+
+utils::globalVariables(c(
+  "schema", "table", "table_id", "target_schema", "target_table",
+  "target_table_id", "usage_table_id", "outer_dependency",
+  "direct_dependency", "outer_transitive_dependency", "codelist", "codelist_url"
+))
 
 # Model version and schema selections ----
 
@@ -13,6 +25,7 @@ library(stringr)
 #' @format Character scalar, currently "4.0.0".
 #' @examples
 #' IOTC_ROS
+#' @export
 IOTC_ROS <- "4.0.0"
 #' Schemas included in each ROS report domain
 #'
@@ -21,6 +34,7 @@ IOTC_ROS <- "4.0.0"
 #' @format Named list of character vectors: ALL, LL, PS, PL, GN and CODE_LIST.
 #' @examples
 #' ROS_SCHEMAS$LL
+#' @export
 ROS_SCHEMAS <- list(
   ALL = c("ros_meta", "ros_common", "ros_ps", "ros_ll", "ros_pl", "ros_gn"),
   LL = c("ros_meta", "ros_common", "ros_ll"),
@@ -34,10 +48,11 @@ ROS_SCHEMAS <- list(
 
 #' Default report generation date
 #'
-#' Captures the current date when this script is sourced. Supply date or timestamp to override it.
+#' Captures the current date when the package is loaded. Supply date or timestamp to override it.
 #' @format Character scalar in YYYY-MM-DD format.
 #' @examples
 #' DEFAULT_TIME_STAMP
+#' @export
 DEFAULT_TIME_STAMP <- format(Sys.Date(), "%Y-%m-%d")
 #' Saved metadata directory
 #'
@@ -46,6 +61,7 @@ DEFAULT_TIME_STAMP <- format(Sys.Date(), "%Y-%m-%d")
 #' @format Character path, models/4.0.0 for the current model version.
 #' @examples
 #' DB_METADATA_DIRECTORY
+#' @export
 DB_METADATA_DIRECTORY <- file.path("models", IOTC_ROS)
 #' Generated ROS model documentation directory
 #'
@@ -54,6 +70,7 @@ DB_METADATA_DIRECTORY <- file.path("models", IOTC_ROS)
 #' @format Character path, output/model/4.0.0 for the current model version.
 #' @examples
 #' DB_REPORT_DIRECTORY
+#' @export
 DB_REPORT_DIRECTORY <- file.path("output", "model", IOTC_ROS)
 
 #' SQL export directory
@@ -63,15 +80,18 @@ DB_REPORT_DIRECTORY <- file.path("output", "model", IOTC_ROS)
 #' @format Character path, output/sql.
 #' @examples
 #' DB_SQL_DIRECTORY
+#' @export
 DB_SQL_DIRECTORY <- file.path("output", "sql")
 #' Official reference-data links
 #'
-#' Loaded from config/ros-code-list-urls.csv when this script is sourced.
+#' Loaded from the packaged code-list URL mapping.
 #' Used by ros_link_to_url() to link reference tables to their configured official URLs.
 #' @format A data.table containing codelist (schema.table) and codelist_url columns.
 #' @examples
 #' head(ROS_CODE_LIST_URLS)
-ROS_CODE_LIST_URLS <- fread(file.path("config", "ros-code-list-urls.csv"))
+#' @export
+ROS_CODE_LIST_URLS <- fread(system.file("config", "ros-code-list-urls.csv",
+                                      package = "rosschemaatlas", mustWork = TRUE))
 
 # Report palette ----
 
@@ -81,6 +101,7 @@ ROS_CODE_LIST_URLS <- fread(file.path("config", "ros-code-list-urls.csv"))
 #' @format Named character vector of hexadecimal colour codes, indexed by schema name.
 #' @examples
 #' ros_report_colors["ros_ll"]
+#' @export
 ros_report_colors <- c(
   ros_meta = "#D1D5DB", ros_common = "#93C5FD", ros_ps = "#FDBA74",
   ros_ll = "#86EFAC", ros_pl = "#C4B5FD", ros_gn = "#F9A8D4",
@@ -97,6 +118,7 @@ ros_report_colors <- c(
 #'
 #' @param value Character scalar in schema.table format.
 #' @return A list containing character scalars schema and table.
+#' @keywords internal
 ros_split_table_id <- function(value) {
   parts <- strsplit(value, ".", fixed = TRUE)[[1L]]
   if (length(parts) != 2L) stop("Expected a schema.table identifier: ", value)
@@ -112,6 +134,7 @@ ros_split_table_id <- function(value) {
 #' @param metadata Metadata list returned by dbschemaatlas::read_metadata().
 #' @param schemas Character vector of schema names to retain.
 #' @return The filtered metadata list.
+#' @keywords internal
 ros_subset_metadata <- function(metadata, schemas) {
   metadata$schemas_description <- metadata$schemas_description[schema %in% schemas]
   metadata$tables_description <- metadata$tables_description[schema %in% schemas]
@@ -128,6 +151,7 @@ ros_subset_metadata <- function(metadata, schemas) {
 #' @param root_directory Directory containing the five metadata CSV files.
 #' @param schemas Character vector of schema names to include.
 #' @return A dbschema_model object. No database connection is opened.
+#' @keywords internal
 ros_metadata_model <- function(root_directory, schemas) {
   metadata <- dbschemaatlas::read_metadata(root_directory)
   dbschemaatlas::build_schema_model(ros_subset_metadata(metadata, schemas))
@@ -140,6 +164,7 @@ ros_metadata_model <- function(root_directory, schemas) {
 #' @param model A dbschema_model object.
 #' @param keep_tables Character vector of qualified schema.table identifiers.
 #' @return The filtered model; both ends of retained relationships belong to keep_tables.
+#' @keywords internal
 ros_filter_model <- function(model, keep_tables) {
   model$tables <- model$tables[table_id %in% keep_tables]
   model$columns <- model$columns[paste(schema, table, sep = ".") %in% keep_tables]
@@ -164,6 +189,7 @@ ros_filter_model <- function(model, keep_tables) {
 #' @param schema_filter Function taking one schema name and returning one logical value.
 #' @return A sorted data.table with table_id, direct_dependency, outer_dependency
 #' and outer_transitive_dependency columns.
+#' @keywords internal
 ros_shell_dependencies <- function(model, schema_filter) {
   dependencies <- dbschemaatlas::model_dependencies(model)
   direct <- sort(unique(c(
@@ -198,6 +224,7 @@ ros_shell_dependencies <- function(model, schema_filter) {
 #'
 #' @param config_file YAML connection file; defaults to ros-db.yaml in the working directory.
 #' @return The character scalar naming the password environment variable.
+#' @export
 ros_password_variable <- function(config_file = "ros-db.yaml") {
   config <- yaml::read_yaml(config_file, handlers = list(env = identity))
   variable <- config$password
@@ -220,6 +247,7 @@ ros_password_variable <- function(config_file = "ros-db.yaml") {
 #' @param prompt Optional function accepting a prompt label and returning one password string.
 #' NULL uses askpass::askpass(); supplying a function allows a custom password prompt.
 #' @return TRUE invisibly after setting the environment variable.
+#' @export
 ros_set_password <- function(config_file = "ros-db.yaml", prompt = NULL) {
   variable <- ros_password_variable(config_file)
   if (is.null(prompt)) {
@@ -243,6 +271,7 @@ ros_set_password <- function(config_file = "ros-db.yaml", prompt = NULL) {
 #' @param config_file YAML connection file; defaults to ros-db.yaml.
 #' @param read_only Logical scalar; TRUE by default. FALSE explicitly permits database writes.
 #' @return An open DBI connection. The caller owns it and must disconnect it.
+#' @export
 connect_to_ros <- function(config_file = "ros-db.yaml", read_only = TRUE) {
   if (!is.logical(read_only) || length(read_only) != 1L || is.na(read_only)) {
     stop("read_only must be TRUE or FALSE.")
@@ -272,6 +301,7 @@ connect_to_ros <- function(config_file = "ros-db.yaml", read_only = TRUE) {
 #' @param config_file YAML connection file; defaults to ros-db.yaml.
 #' @param root_directory Metadata CSV directory; defaults to models/4.0.0.
 #' @return A character vector of generated SQL statements, also returned when applied.
+#' @export
 ros_apply_comments <- function(apply = FALSE, config_file = "ros-db.yaml",
                                root_directory = DB_METADATA_DIRECTORY) {
   if (!is.logical(apply) || length(apply) != 1L || is.na(apply)) stop("apply must be TRUE or FALSE.")
@@ -296,6 +326,7 @@ ros_apply_comments <- function(apply = FALSE, config_file = "ros-db.yaml",
 #' comments_sql <- ros_apply_comments()
 #' ros_save_comments_sql(comments_sql)
 #' }
+#' @export
 ros_save_comments_sql <- function(comments_sql, date = DEFAULT_TIME_STAMP) {
   dir.create(DB_SQL_DIRECTORY, recursive = TRUE, showWarnings = FALSE)
   path <- file.path(DB_SQL_DIRECTORY, sprintf("ros-comments-%s-%s.sql", IOTC_ROS, date))
@@ -317,6 +348,7 @@ ros_save_comments_sql <- function(comments_sql, date = DEFAULT_TIME_STAMP) {
 #' @param remove_unused_tables Logical flag, FALSE by default. If TRUE and dependencies.csv exists,
 #' retain only table identifiers listed in that file.
 #' @return A dbschema_model with domain and version attributes.
+#' @export
 ros_db_metadata_create <- function(domain, version = IOTC_ROS,
                                    root_directory = DB_METADATA_DIRECTORY,
                                    remove_unused_tables = FALSE) {
@@ -343,6 +375,7 @@ ros_db_metadata_create <- function(domain, version = IOTC_ROS,
 #' @param version Model version; only 4.0.0 is accepted.
 #' @param root_directory Metadata CSV directory; defaults to models/4.0.0.
 #' @return The dependency data.table invisibly.
+#' @export
 ros_db_generate_shell_dependencies <- function(version = IOTC_ROS,
                                                root_directory = DB_METADATA_DIRECTORY) {
   model <- ros_db_metadata_create("ALL", version, root_directory)
@@ -366,6 +399,7 @@ ros_db_generate_shell_dependencies <- function(version = IOTC_ROS,
 #'
 #' @param config_file YAML connection file; defaults to ros-db.yaml. Set its password first.
 #' @return The five-component extracted metadata list invisibly.
+#' @export
 ros_extract_metadata <- function(config_file = "ros-db.yaml") {
   if (!requireNamespace("RPostgres", quietly = TRUE)) stop("Install RPostgres to extract metadata.")
   metadata <- dbschemaatlas::extract_schema_metadata(
@@ -385,6 +419,7 @@ ros_extract_metadata <- function(config_file = "ros-db.yaml") {
 #'
 #' @param value Character vector of qualified schema.table identifiers.
 #' @return A logical vector identifying values matching the refs_ schema convention.
+#' @keywords internal
 is_column_code_list_function <- function(value) str_length(value) > 0 & value %like% "refs_.+"
 #' Identify ROS registry table identifiers
 #'
@@ -392,6 +427,7 @@ is_column_code_list_function <- function(value) str_length(value) > 0 & value %l
 #'
 #' @param value Character vector of qualified schema.table identifiers.
 #' @return A logical vector identifying values matching the ros_meta schema convention.
+#' @keywords internal
 is_column_registry_function <- function(value) str_length(value) > 0 & value %like% "ros_meta.+"
 #' Identify non-reference, non-registry table identifiers
 #'
@@ -399,6 +435,7 @@ is_column_registry_function <- function(value) str_length(value) > 0 & value %li
 #'
 #' @param value Character vector of qualified schema.table identifiers.
 #' @return A logical vector identifying other nonempty table identifiers.
+#' @keywords internal
 is_column_data_function <- function(value) str_length(value) > 0 & !value %like% "refs_.+|ros_meta.+"
 
 #' Classify one relationship target for display
@@ -407,6 +444,7 @@ is_column_data_function <- function(value) str_length(value) > 0 & !value %like%
 #'
 #' @param schema_and_table One qualified schema.table identifier.
 #' @return One of Code list, ROS registry, ROS data or Database table.
+#' @export
 ros_link_to_type <- function(schema_and_table) {
   if (is_column_code_list_function(schema_and_table)) return("Code list")
   if (is_column_registry_function(schema_and_table)) return("ROS registry")
@@ -418,13 +456,14 @@ ros_link_to_type <- function(schema_and_table) {
 #'
 #' Use the configured official code-list URL when available, otherwise a local table anchor.
 #'
-#' Code-list mappings are loaded from config/ros-code-list-urls.csv.
+#' Code-list mappings are loaded from the packaged config/ros-code-list-urls.csv.
 #' Internal links use stable anchors provided by dbschemaatlas.
 #'
 #' @param schema Character scalar naming the target schema.
 #' @param table Character scalar naming the target table.
 #' @param schema_and_table Qualified schema.table identifier used as link text and mapping key.
 #' @return An HTML anchor string.
+#' @export
 ros_link_to_url <- function(schema, table, schema_and_table) {
   if (is_column_code_list_function(schema_and_table)) {
     url <- ROS_CODE_LIST_URLS[codelist == schema_and_table, codelist_url]
@@ -446,10 +485,11 @@ ros_link_to_url <- function(schema, table, schema_and_table) {
 #' @param domain Character scalar: ALL, LL, PS, PL or GN.
 #' @param version Model version; only 4.0.0 is accepted.
 #' @param timestamp Generation-date label used in the report title and output subdirectory.
-#' Defaults to DEFAULT_TIME_STAMP, captured when the project is sourced.
+#' Defaults to DEFAULT_TIME_STAMP, captured when the package is loaded.
 #' @param root_directory Metadata CSV directory; defaults to models/4.0.0.
 #' @param export_directory Parent output directory; defaults to output/model/4.0.0.
 #' @return The generated report path invisibly.
+#' @export
 ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
                                             timestamp = DEFAULT_TIME_STAMP,
                                             root_directory = DB_METADATA_DIRECTORY,
@@ -466,7 +506,8 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
     abstract = paste0("This document describes the ROS database tables",
                       if (domain == "ALL") "." else sprintf(" used by the %s domain.", domain)),
     author = "IOTC Secretariat <IOTC-Secretariat@fao.org>",
-    logo = file.path("templates", "IOTC_with_text.png"),
+    logo = system.file("templates", "IOTC_with_text.png",
+                          package = "rosschemaatlas", mustWork = TRUE),
     schemas = unique(c(ROS_SCHEMAS[[domain]], ROS_SCHEMAS$CODE_LIST)),
     schema_groups = list(ROS = ROS_SCHEMAS[[domain]], `Reference data` = ROS_SCHEMAS$CODE_LIST),
     schema_colors = ros_report_colors,
@@ -479,8 +520,10 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
     timestamp_format = "",
     sections = c(columns = TRUE, dependencies = TRUE, usages = TRUE, graphs = FALSE),
     template_overrides = list(
-      report = file.path("templates", "atlas-report.Rmd.tpl"),
-      style = file.path("templates", "atlas-report.css")
+      report = system.file("templates", "atlas-report.Rmd.tpl",
+                          package = "rosschemaatlas", mustWork = TRUE),
+      style = system.file("templates", "atlas-report.css",
+                          package = "rosschemaatlas", mustWork = TRUE)
     )
   )
   report <- dbschemaatlas::render_schema_report(model, config, timestamp = Sys.time())
@@ -519,8 +562,9 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
 #' R Markdown, Pandoc and htmlwidgets dependencies must be available.
 #'
 #' @param date Character scalar in YYYY-MM-DD format. Defaults to DEFAULT_TIME_STAMP,
-#' which is set to the current date when the project is sourced.
+#' which is set to the current date when the package is loaded.
 #' @return A list of the five generated report paths invisibly, in ALL, LL, PS, PL, GN order.
+#' @export
 ros_generate_documentation <- function(date = DEFAULT_TIME_STAMP) {
   if (length(date) != 1L || is.na(date) ||
       !grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", date) || is.na(as.Date(date))) {
@@ -531,4 +575,19 @@ ros_generate_documentation <- function(date = DEFAULT_TIME_STAMP) {
   })
   dbschemaatlas::generate_report_indexes(DB_REPORT_DIRECTORY, title = "IOTC ROS database 4.0.0")
   invisible(reports)
+}
+
+# Package loading ----
+
+#' Initialise the session report date
+#'
+#' Refresh the shared report date when the package is loaded, including installed packages.
+#' @param libname Library directory passed by R.
+#' @param pkgname Package name passed by R.
+#' @return NULL invisibly.
+#' @noRd
+.onLoad <- function(libname, pkgname) {
+  assign("DEFAULT_TIME_STAMP", format(Sys.Date(), "%Y-%m-%d"),
+         envir = asNamespace(pkgname))
+  invisible(NULL)
 }

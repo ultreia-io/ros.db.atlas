@@ -1,0 +1,15 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.Renviron$
+^\.editorconfig$
+^\.gitattributes$
+^\.github$
+^\.idea$
+^docs$
+^output$
+^models$
+^LICENSE$
+^_pkgdown\.yml$
+^ros-db\.yaml$
+^.*-db\.(yaml|json)$
+^.*\.sql$

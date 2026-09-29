@@ -1,0 +1,38 @@
+Package: rosschemaatlas
+Title: IOTC ROS Database Metadata and Documentation
+Version: 4.0.0
+Authors@R:
+    person(given = "Tony", family = "Chemit", role = c("aut", "cre"),
+           email = "tchemit@users.noreply.github.com")
+Description: Extracts PostgreSQL metadata for the IOTC Regional Observer
+    Scheme database version 4.0.0, applies descriptions from editable metadata
+    files, and generates branded HTML reports and interactive dependency graphs
+    using dbiutils and dbschemaatlas.
+License: GPL-3
+URL: https://ultreia-io.github.io/ros-schema-atlas/,
+    https://github.com/ultreia-io/ros-schema-atlas
+BugReports: https://github.com/ultreia-io/ros-schema-atlas/issues
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Depends:
+    R (>= 4.0.0)
+Imports:
+    askpass,
+    data.table,
+    DBI,
+    dbiutils (>= 0.1.0),
+    dbschemaatlas (>= 0.2.1),
+    htmlwidgets,
+    RPostgres,
+    stringr,
+    yaml
+Suggests:
+    pkgdown,
+    pkgload,
+    rmarkdown,
+    roxygen2
+Remotes:
+    ultreia-io/dbiutils,
+    ultreia-io/dbschemaatlas
+Config/Needs/website: pkgdown
+Config/roxygen2/version: 8.1.0
