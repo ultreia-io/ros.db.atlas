@@ -1,0 +1,22 @@
+---
+title: "R reference"
+---
+
+Documentation generated from the Roxygen comments in `R/ros-schema-atlas.R`.
+
+```{r, echo=FALSE, results="asis", message=FALSE}
+env <- new.env(parent = globalenv())
+sys.source("R/ros-schema-atlas.R", envir = env)
+blocks <- roxygen2::parse_file("R/ros-schema-atlas.R", env = env)
+topics <- roxygen2::roclet_process(roxygen2::rd_roclet(), blocks, env, getwd())
+for (topic in topics) {
+  rd <- tools::parse_Rd(textConnection(format(topic)))
+  html <- tempfile(fileext = ".html")
+  tools::Rd2HTML(rd, out = html, no_links = TRUE)
+  lines <- readLines(html, warn = FALSE)
+  body_start <- grep("<body", lines)[1L]
+  body_end <- grep("</body>", lines)[1L]
+  cat(lines[seq.int(body_start + 1L, body_end - 1L)], sep = "\n")
+  unlink(html)
+}
+```

@@ -1,0 +1,9 @@
+---
+title: "ROS schema atlas"
+site: rmarkdown::default_site_generator
+---
+
+```{r, echo=FALSE, results="asis"}
+# Use the README as the site content; display its R examples without executing them.
+cat(readLines("README.md", warn = FALSE)[-(1:2)], sep = "\n")
+```

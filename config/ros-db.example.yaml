@@ -1,0 +1,7 @@
+# Copy to an ignored ros-db.yaml and select the actual ROS 4.0.0 database.
+host: localhost
+port: 5432
+dbname: REPLACE_WITH_ROS_4_DATABASE_NAME
+user: REPLACE_WITH_DATABASE_USER
+password: !env IOTC_ROS_DB_PASSWORD
+client_encoding: UTF8
