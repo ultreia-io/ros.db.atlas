@@ -545,7 +545,8 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
       dbschemaatlas::dependency_graph(model, graph_config),
       graph_file,
       title = graph_config$title,
-      selfcontained = TRUE
+      selfcontained = FALSE,
+      libdir = "graph-assets"
     )
   }
   invisible(report)
@@ -573,7 +574,9 @@ ros_generate_documentation <- function(date = DEFAULT_TIME_STAMP) {
   reports <- lapply(c("ALL", "LL", "PS", "PL", "GN"), function(domain) {
     ros_db_metadata_generate_report(domain, timestamp = date)
   })
-  dbschemaatlas::generate_report_indexes(DB_REPORT_DIRECTORY, title = "IOTC ROS database 4.0.0")
+  dbschemaatlas::generate_report_indexes(DB_REPORT_DIRECTORY,
+                                          title = "IOTC ROS database 4.0.0",
+                                          exclude_directories = "graph-assets")
   invisible(reports)
 }
 

@@ -45,7 +45,7 @@ Load the installed package at the start of each R session:
 library(rosschemaatlas)
 ```
 
-The package requires `dbschemaatlas` 0.2.1 or later. GitHub installation resolves its dependencies.
+The package requires `dbschemaatlas` 0.2.2 or later. GitHub installation resolves its dependencies.
 
 ### Database connection
 
@@ -133,7 +133,8 @@ Generation works offline from the saved metadata and creates reports for ALL, LL
 
 The reports include searchable tables in their natural order in Columns, Dependencies, and Usages tabs.
 
-Required CSS and JavaScript are embedded in the HTML. Dependency graphs and navigation indexes are also generated.
+Report CSS and JavaScript are embedded in the HTML. Dependency graphs share a `graph-assets/` directory
+within each dated output directory. Navigation indexes omit that asset directory.
 
 To choose a generation date:
 

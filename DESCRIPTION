@@ -1,6 +1,6 @@
 Package: rosschemaatlas
 Title: IOTC ROS Database Metadata and Documentation
-Version: 4.0.0
+Version: 4.0.1
 Authors@R:
     person(given = "Tony", family = "Chemit", role = c("aut", "cre"),
            email = "tchemit@users.noreply.github.com")
@@ -21,7 +21,7 @@ Imports:
     data.table,
     DBI,
     dbiutils (>= 0.1.0),
-    dbschemaatlas (>= 0.2.1),
+    dbschemaatlas (>= 0.2.2),
     htmlwidgets,
     RPostgres,
     stringr,
