@@ -16,8 +16,9 @@ Encoding: UTF-8
 Depends: R (>= 4.0.0)
 Imports: askpass, data.table, DBI, db.tools (>= 0.1.0), db.atlas (>= 0.3.0),
     htmlwidgets, RPostgres, stringr, yaml
-Suggests: pkgdown, pkgload, rmarkdown, roxygen2
+Suggests: knitr, rmarkdown
 Remotes: ultreia-io/db.tools, ultreia-io/db.atlas
+VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 Config/Needs/coverage: covr, xml2
 Config/Needs/website: pkgdown, zip

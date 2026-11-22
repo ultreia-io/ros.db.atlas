@@ -1,0 +1,18 @@
+---
+title: "Terminology"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Terminology}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+| Term              | Meaning                                                           |
+|-------------------|-------------------------------------------------------------------|
+| ROS model version | The schema and table definitions for a ROS database version.      |
+| Metadata snapshot | The editable CSV files extracted from PostgreSQL.                 |
+| Database comment  | A description stored in PostgreSQL on a schema, table, or column. |
+| Report domain     | The schemas selected for ALL or one gear.                         |
+| Dependency        | The foreign key from a table to a referenced table.               |
+| Usage             | The same foreign key viewed from the referenced table.            |
+| Dependency graph  | An interactive view of tables and their foreign keys.             |
