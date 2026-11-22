@@ -1,6 +1,6 @@
 Package: ros.db.atlas
 Title: IOTC ROS Database Metadata and Documentation
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R:
     person("Tony", "Chemit", role = c("aut", "cre"),
            email = "tchemit@users.noreply.github.com")
