@@ -7,7 +7,7 @@
 ros_subset_metadata(metadata, schemas)
 }
 \arguments{
-\item{metadata}{Metadata list returned by dbschemaatlas::read_metadata().}
+\item{metadata}{Metadata list returned by db.atlas::read_metadata().}
 
 \item{schemas}{Character vector of schema names to retain.}
 }

@@ -1,100 +1,3 @@
-# IOTC ROS 4.0.0 ----
-
-# ROS 4.0.0 configuration ----
-
-#' ROS database metadata and documentation
-#'
-#' Extract metadata, apply database comments and generate documentation for ROS 4.0.0.
-#' @import data.table
-#' @importFrom stringr str_length
-#' @importFrom stats setNames
-#' @keywords internal
-"_PACKAGE"
-
-utils::globalVariables(c(
-  "schema", "table", "table_id", "target_schema", "target_table",
-  "target_table_id", "usage_table_id", "outer_dependency",
-  "direct_dependency", "outer_transitive_dependency", "codelist", "codelist_url"
-))
-
-# Model version and schema selections ----
-
-#' Supported ROS model version
-#'
-#' Version used to select metadata and report directories. This does not select the database name.
-#' @format Character scalar, currently "4.0.0".
-#' @examples
-#' IOTC_ROS
-#' @export
-IOTC_ROS <- "4.0.0"
-#' Schemas included in each ROS report domain
-#'
-#' ALL includes every ROS gear. LL, PS, PL and GN include shared schemas and their own gear.
-#' CODE_LIST lists the reference schemas added to every domain model.
-#' @format Named list of character vectors: ALL, LL, PS, PL, GN and CODE_LIST.
-#' @examples
-#' ROS_SCHEMAS$LL
-#' @export
-ROS_SCHEMAS <- list(
-  ALL = c("ros_meta", "ros_common", "ros_ps", "ros_ll", "ros_pl", "ros_gn"),
-  LL = c("ros_meta", "ros_common", "ros_ll"),
-  PS = c("ros_meta", "ros_common", "ros_ps"),
-  PL = c("ros_meta", "ros_common", "ros_pl"),
-  GN = c("ros_meta", "ros_common", "ros_gn"),
-  CODE_LIST = c("refs_admin", "refs_biology", "refs_data", "refs_fishery",
-                "refs_fishery_config", "refs_gis", "refs_meta")
-)
-# Default paths and report date ----
-
-#' Default report generation date
-#'
-#' Captures the current date when the package is loaded. Supply date or timestamp to override it.
-#' @format Character scalar in YYYY-MM-DD format.
-#' @examples
-#' DEFAULT_TIME_STAMP
-#' @export
-DEFAULT_TIME_STAMP <- format(Sys.Date(), "%Y-%m-%d")
-#' Saved metadata directory
-#'
-#' Directory containing the extracted CSV files, relative to the project working directory.
-#' Individual metadata functions accept root_directory to override this default.
-#' @format Character path, models/4.0.0 for the current model version.
-#' @examples
-#' DB_METADATA_DIRECTORY
-#' @export
-DB_METADATA_DIRECTORY <- file.path("models", IOTC_ROS)
-#' Generated ROS model documentation directory
-#'
-#' Parent directory for dated model reports, relative to the project working directory.
-#' Individual report functions accept export_directory to override this default.
-#' @format Character path, output/model/4.0.0 for the current model version.
-#' @examples
-#' DB_REPORT_DIRECTORY
-#' @export
-DB_REPORT_DIRECTORY <- file.path("output", "model", IOTC_ROS)
-
-#' SQL export directory
-#'
-#' Directory used by ros_save_comments_sql(), relative to the project working directory.
-#' Created only when saving SQL files.
-#' @format Character path, output/sql.
-#' @examples
-#' DB_SQL_DIRECTORY
-#' @export
-DB_SQL_DIRECTORY <- file.path("output", "sql")
-#' Official reference-data links
-#'
-#' Loaded from the packaged code-list URL mapping.
-#' Used by ros_link_to_url() to link reference tables to their configured official URLs.
-#' @format A data.table containing codelist (schema.table) and codelist_url columns.
-#' @examples
-#' head(ROS_CODE_LIST_URLS)
-#' @export
-ROS_CODE_LIST_URLS <- fread(system.file("config", "ros-code-list-urls.csv",
-                                      package = "rosschemaatlas", mustWork = TRUE))
-
-# Report palette ----
-
 #' Schema colours used in model reports
 #'
 #' Assigns a colour to each ROS and reference schema. Changes affect subsequent report renders.
@@ -109,8 +12,6 @@ ros_report_colors <- c(
   refs_fishery = "#FDE68A", refs_fishery_config = "#FDE68A",
   refs_gis = "#FDE68A", refs_meta = "#FDE68A"
 )
-
-# Offline metadata helpers ----
 
 #' Split a qualified table identifier
 #'
@@ -131,7 +32,7 @@ ros_split_table_id <- function(value) {
 #'
 #' Foreign keys are selected by source schema; referenced tables may belong to another schema.
 #'
-#' @param metadata Metadata list returned by dbschemaatlas::read_metadata().
+#' @param metadata Metadata list returned by db.atlas::read_metadata().
 #' @param schemas Character vector of schema names to retain.
 #' @return The filtered metadata list.
 #' @keywords internal
@@ -153,8 +54,8 @@ ros_subset_metadata <- function(metadata, schemas) {
 #' @return A dbschema_model object. No database connection is opened.
 #' @keywords internal
 ros_metadata_model <- function(root_directory, schemas) {
-  metadata <- dbschemaatlas::read_metadata(root_directory)
-  dbschemaatlas::build_schema_model(ros_subset_metadata(metadata, schemas))
+  metadata <- db.atlas::read_metadata(root_directory)
+  db.atlas::build_schema_model(ros_subset_metadata(metadata, schemas))
 }
 
 #' Restrict a model to selected tables
@@ -191,7 +92,7 @@ ros_filter_model <- function(model, keep_tables) {
 #' and outer_transitive_dependency columns.
 #' @keywords internal
 ros_shell_dependencies <- function(model, schema_filter) {
-  dependencies <- dbschemaatlas::model_dependencies(model)
+  dependencies <- db.atlas::model_dependencies(model)
   direct <- sort(unique(c(
     dependencies[vapply(schema, schema_filter, logical(1L)), target_table_id],
     dependencies[vapply(target_schema, schema_filter, logical(1L)), table_id]
@@ -213,8 +114,6 @@ ros_shell_dependencies <- function(model, schema_filter) {
     outer_dependency = vapply(shell, function(id) !schema_filter(ros_split_table_id(id)$schema), logical(1L))
   )[, outer_transitive_dependency := outer_dependency & !direct_dependency][order(table_id)]
 }
-
-# Session credentials and database connections ----
 
 #' Read the password environment-variable name
 #'
@@ -263,7 +162,7 @@ ros_set_password <- function(config_file = "ros-db.yaml", prompt = NULL) {
 
 #' Open a PostgreSQL connection with an explicit transaction policy
 #'
-#' Use dbiutils to resolve YAML !env values and create an RPostgres connection.
+#' Use db.tools to resolve YAML !env values and create an RPostgres connection.
 #'
 #' Set the password in the session before connecting. The connection is closed if setting
 #' the transaction policy fails. This function never stores the password.
@@ -276,7 +175,7 @@ connect_to_ros <- function(config_file = "ros-db.yaml", read_only = TRUE) {
   if (!is.logical(read_only) || length(read_only) != 1L || is.na(read_only)) {
     stop("read_only must be TRUE or FALSE.")
   }
-  connection <- dbiutils::db_connect_from_yaml(RPostgres::Postgres(), config_file)
+  connection <- db.tools::db_connect_from_yaml(RPostgres::Postgres(), config_file)
   tryCatch({
     DBI::dbExecute(connection, paste("SET default_transaction_read_only =", if (read_only) "on" else "off"))
     connection
@@ -286,15 +185,13 @@ connect_to_ros <- function(config_file = "ros-db.yaml", read_only = TRUE) {
   })
 }
 
-# Database comment updates ----
-
 #' Preview or apply descriptions from the saved metadata
 #'
-#' Generate schema, table and column COMMENT statements using dbschemaatlas.
+#' Generate schema, table and column COMMENT statements using db.atlas.
 #'
 #' Only nonempty description values are applied; NA and blank values are skipped.
 #' Applying comments requires ownership or equivalent database privileges.
-#' The temporary connection is closed by dbiutils; local CSV files are not changed.
+#' The temporary connection is closed by db.tools; local CSV files are not changed.
 #'
 #' @param apply Logical scalar. FALSE returns SQL using a read-only connection;
 #' TRUE executes all generated statements in one transaction using a writable connection.
@@ -305,7 +202,7 @@ connect_to_ros <- function(config_file = "ros-db.yaml", read_only = TRUE) {
 ros_apply_comments <- function(apply = FALSE, config_file = "ros-db.yaml",
                                root_directory = DB_METADATA_DIRECTORY) {
   if (!is.logical(apply) || length(apply) != 1L || is.na(apply)) stop("apply must be TRUE or FALSE.")
-  dbschemaatlas::apply_metadata_comments(
+  db.atlas::apply_metadata_comments(
     root_directory,
     function() connect_to_ros(config_file, read_only = !apply),
     apply = apply
@@ -334,8 +231,6 @@ ros_save_comments_sql <- function(comments_sql, date = DEFAULT_TIME_STAMP) {
   invisible(path)
 }
 
-# Model selection and dependency snapshots ----
-
 #' Build the offline metadata model for one ROS domain
 #'
 #' Read the saved snapshot and select domain schemas plus configured reference schemas.
@@ -354,9 +249,9 @@ ros_db_metadata_create <- function(domain, version = IOTC_ROS,
                                    remove_unused_tables = FALSE) {
   if (!identical(version, IOTC_ROS)) stop("This project supports only ROS 4.0.0.")
   if (!domain %in% c("ALL", "LL", "PS", "PL", "GN")) stop("Unknown ROS domain: ", domain)
-  metadata <- dbschemaatlas::read_metadata(root_directory)
+  metadata <- db.atlas::read_metadata(root_directory)
   schemas <- unique(c(ROS_SCHEMAS[[domain]], ROS_SCHEMAS$CODE_LIST))
-  model <- dbschemaatlas::build_schema_model(ros_subset_metadata(metadata, schemas))
+  model <- db.atlas::build_schema_model(ros_subset_metadata(metadata, schemas))
   if (isTRUE(remove_unused_tables) && !is.null(metadata$dependencies)) {
     model <- ros_filter_model(model, metadata$dependencies$table_id)
   }
@@ -387,8 +282,6 @@ ros_db_generate_shell_dependencies <- function(version = IOTC_ROS,
   invisible(dependencies)
 }
 
-# Read-only extraction ----
-
 #' Extract the ROS 4.0.0 database metadata
 #'
 #' Read PostgreSQL catalog metadata for the configured ROS and reference schemas.
@@ -402,16 +295,14 @@ ros_db_generate_shell_dependencies <- function(version = IOTC_ROS,
 #' @export
 ros_extract_metadata <- function(config_file = "ros-db.yaml") {
   if (!requireNamespace("RPostgres", quietly = TRUE)) stop("Install RPostgres to extract metadata.")
-  metadata <- dbschemaatlas::extract_schema_metadata(
+  metadata <- db.atlas::extract_schema_metadata(
     unique(c(ROS_SCHEMAS$ALL, ROS_SCHEMAS$CODE_LIST)),
     function() connect_to_ros(config_file)
   )
-  dbschemaatlas::write_metadata(metadata, DB_METADATA_DIRECTORY)
+  db.atlas::write_metadata(metadata, DB_METADATA_DIRECTORY)
   ros_db_generate_shell_dependencies()
   invisible(metadata)
 }
-
-# Relationship labels and hyperlinks ----
 
 #' Identify reference-data table identifiers
 #'
@@ -421,6 +312,7 @@ ros_extract_metadata <- function(config_file = "ros-db.yaml") {
 #' @return A logical vector identifying values matching the refs_ schema convention.
 #' @keywords internal
 is_column_code_list_function <- function(value) str_length(value) > 0 & value %like% "refs_.+"
+
 #' Identify ROS registry table identifiers
 #'
 #' Internal vectorised classification helper.
@@ -429,6 +321,7 @@ is_column_code_list_function <- function(value) str_length(value) > 0 & value %l
 #' @return A logical vector identifying values matching the ros_meta schema convention.
 #' @keywords internal
 is_column_registry_function <- function(value) str_length(value) > 0 & value %like% "ros_meta.+"
+
 #' Identify non-reference, non-registry table identifiers
 #'
 #' Internal vectorised classification helper.
@@ -457,7 +350,7 @@ ros_link_to_type <- function(schema_and_table) {
 #' Use the configured official code-list URL when available, otherwise a local table anchor.
 #'
 #' Code-list mappings are loaded from the packaged config/ros-code-list-urls.csv.
-#' Internal links use stable anchors provided by dbschemaatlas.
+#' Internal links use stable anchors provided by db.atlas.
 #'
 #' @param schema Character scalar naming the target schema.
 #' @param table Character scalar naming the target table.
@@ -469,10 +362,8 @@ ros_link_to_url <- function(schema, table, schema_and_table) {
     url <- ROS_CODE_LIST_URLS[codelist == schema_and_table, codelist_url]
     if (length(url)) return(sprintf("<a target='_iotc_code_lists' href='%s'>%s</a>", url[[1L]], schema_and_table))
   }
-  sprintf("<a href='#table_%s'>%s</a>", dbschemaatlas::atlas_anchor(schema, table), schema_and_table)
+  sprintf("<a href='#table_%s'>%s</a>", db.atlas::atlas_anchor(schema, table), schema_and_table)
 }
-
-# Individual domain reports ----
 
 #' Render one ROS domain report and its dependency graphs
 #'
@@ -501,13 +392,13 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
     sprintf("ROS_database%s_dependencies_%s.html", report_suffix, domain_schemas),
     domain_schemas
   )
-  config <- dbschemaatlas::atlas_report_config(
+  config <- db.atlas::atlas_report_config(
     title = sprintf("IOTC ROS Database (version: %s %s)", version, timestamp),
     abstract = paste0("This document describes the ROS database tables",
                       if (domain == "ALL") "." else sprintf(" used by the %s domain.", domain)),
     author = "IOTC Secretariat <IOTC-Secretariat@fao.org>",
     logo = system.file("templates", "IOTC_with_text.png",
-                          package = "rosschemaatlas", mustWork = TRUE),
+                          package = "ros.db.atlas", mustWork = TRUE),
     schemas = unique(c(ROS_SCHEMAS[[domain]], ROS_SCHEMAS$CODE_LIST)),
     schema_groups = list(ROS = ROS_SCHEMAS[[domain]], `Reference data` = ROS_SCHEMAS$CODE_LIST),
     schema_colors = ros_report_colors,
@@ -521,12 +412,12 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
     sections = c(columns = TRUE, dependencies = TRUE, usages = TRUE, graphs = FALSE),
     template_overrides = list(
       report = system.file("templates", "atlas-report.Rmd.tpl",
-                          package = "rosschemaatlas", mustWork = TRUE),
+                          package = "ros.db.atlas", mustWork = TRUE),
       style = system.file("templates", "atlas-report.css",
-                          package = "rosschemaatlas", mustWork = TRUE)
+                          package = "ros.db.atlas", mustWork = TRUE)
     )
   )
-  report <- dbschemaatlas::render_schema_report(model, config, timestamp = Sys.time())
+  report <- db.atlas::render_schema_report(model, config, timestamp = Sys.time())
   for (schema_name in domain_schemas) {
     graph_config <- config
     graph_config$schemas <- c("ros_meta", "ros_common", schema_name)
@@ -542,7 +433,7 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
     )
     graph_file <- file.path(config$output_directory, graph_files[[schema_name]])
     htmlwidgets::saveWidget(
-      dbschemaatlas::dependency_graph(model, graph_config),
+      db.atlas::dependency_graph(model, graph_config),
       graph_file,
       title = graph_config$title,
       selfcontained = FALSE,
@@ -551,8 +442,6 @@ ros_db_metadata_generate_report <- function(domain, version = IOTC_ROS,
   }
   invisible(report)
 }
-
-# Complete documentation site ----
 
 #' Generate the complete ROS 4.0.0 documentation site
 #'
@@ -574,23 +463,8 @@ ros_generate_documentation <- function(date = DEFAULT_TIME_STAMP) {
   reports <- lapply(c("ALL", "LL", "PS", "PL", "GN"), function(domain) {
     ros_db_metadata_generate_report(domain, timestamp = date)
   })
-  dbschemaatlas::generate_report_indexes(DB_REPORT_DIRECTORY,
+  db.atlas::generate_report_indexes(DB_REPORT_DIRECTORY,
                                           title = "IOTC ROS database 4.0.0",
                                           exclude_directories = "graph-assets")
   invisible(reports)
-}
-
-# Package loading ----
-
-#' Initialise the session report date
-#'
-#' Refresh the shared report date when the package is loaded, including installed packages.
-#' @param libname Library directory passed by R.
-#' @param pkgname Package name passed by R.
-#' @return NULL invisibly.
-#' @noRd
-.onLoad <- function(libname, pkgname) {
-  assign("DEFAULT_TIME_STAMP", format(Sys.Date(), "%Y-%m-%d"),
-         envir = asNamespace(pkgname))
-  invisible(NULL)
 }

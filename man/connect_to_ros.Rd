@@ -15,7 +15,7 @@ connect_to_ros(config_file = "ros-db.yaml", read_only = TRUE)
 An open DBI connection. The caller owns it and must disconnect it.
 }
 \description{
-Use dbiutils to resolve YAML !env values and create an RPostgres connection.
+Use db.tools to resolve YAML !env values and create an RPostgres connection.
 }
 \details{
 Set the password in the session before connecting. The connection is closed if setting

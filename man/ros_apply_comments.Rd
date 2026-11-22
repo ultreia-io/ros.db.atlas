@@ -22,10 +22,10 @@ TRUE executes all generated statements in one transaction using a writable conne
 A character vector of generated SQL statements, also returned when applied.
 }
 \description{
-Generate schema, table and column COMMENT statements using dbschemaatlas.
+Generate schema, table and column COMMENT statements using db.atlas.
 }
 \details{
 Only nonempty description values are applied; NA and blank values are skipped.
 Applying comments requires ownership or equivalent database privileges.
-The temporary connection is closed by dbiutils; local CSV files are not changed.
+The temporary connection is closed by db.tools; local CSV files are not changed.
 }

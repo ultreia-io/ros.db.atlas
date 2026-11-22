@@ -21,5 +21,5 @@ Use the configured official code-list URL when available, otherwise a local tabl
 }
 \details{
 Code-list mappings are loaded from the packaged config/ros-code-list-urls.csv.
-Internal links use stable anchors provided by dbschemaatlas.
+Internal links use stable anchors provided by db.atlas.
 }
