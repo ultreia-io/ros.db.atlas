@@ -16,3 +16,11 @@
 /index.html
 /index_files/
 .idea/**/*
+*.tar.gz
+*.tar.gz.sha256
+*.Rcheck/
+/coverage*
+/lib/
+/build/
+/pkgdown/assets/
+/vignettes/*.html

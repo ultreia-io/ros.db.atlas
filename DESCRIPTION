@@ -19,5 +19,6 @@ Imports: askpass, data.table, DBI, db.tools (>= 0.1.0), db.atlas (>= 0.3.0),
 Suggests: pkgdown, pkgload, rmarkdown, roxygen2
 Remotes: ultreia-io/db.tools, ultreia-io/db.atlas
 Roxygen: list(markdown = TRUE)
-Config/Needs/website: pkgdown
+Config/Needs/coverage: covr, xml2
+Config/Needs/website: pkgdown, zip
 Config/roxygen2/version: 8.1.1

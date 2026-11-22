@@ -13,3 +13,15 @@
 ^ros-db\.yaml$
 ^.*-db\.(yaml|json)$
 ^.*\.sql$
+^tools$
+^pkgdown$
+^build/(?!vignette\.rds$).*
+^.*\.tar\.gz.*$
+^.*\.Rcheck$
+^lib$
+^coverage.*$
+^CODE_OF_CONDUCT\.md$
+^CONTRIBUTING\.md$
+^DEVELOPMENT\.md$
+^SECURITY\.md$
+^vignettes/[^/]+\.html$
