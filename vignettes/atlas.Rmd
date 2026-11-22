@@ -1,0 +1,100 @@
+---
+title: "Getting started"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## About this guide
+
+> Extract descriptions from PostgreSQL, edit them, apply the changes, and generate the ROS reports.
+
+Run these commands in one R session from the repository root so the paths point to the tracked ROS snapshot.
+
+```{r setup}
+# Load the ROS metadata and report functions.
+library(ros.db.atlas)
+# Show the supported ROS model version.
+IOTC_ROS
+# Find the packaged connection template.
+connection_template <- system.file("config", "ros-db.example.yaml", package = "ros.db.atlas")
+# Show the name of the password variable configured in the template.
+ros_password_variable(connection_template)
+```
+
+## Set up the connection
+
+Copy the template once, then set `host`, `port`, `dbname`, and `user` for the ROS database.
+
+```{r copy-connection, eval=FALSE}
+# Choose the local connection configuration filename.
+config_file <- "ros-db.yaml"
+# Copy the configuration template while preserving an existing local file.
+file.copy(connection_template, config_file, overwrite = FALSE)
+```
+
+The `password: !env IOTC_ROS_DB_PASSWORD` entry reads the password from the current R session.
+
+```{r set-password, eval=FALSE}
+# Enter the database password through the secure prompt.
+ros_set_password(config_file)
+```
+
+## Extract the database descriptions
+
+```{r extract, eval=FALSE}
+# Read the ROS database and write the metadata CSVs.
+ros_extract_metadata(config_file = config_file)
+```
+
+Extraction uses a read-only connection and replaces the snapshot in `models/4.0.0/`.
+
+## Edit the descriptions
+
+Edit the `description` column in the CSVs for the objects you want to change.
+
+- `models/4.0.0/schemas_description.csv` for schemas.
+- `models/4.0.0/tables_description.csv` for tables.
+- `models/4.0.0/tables_columns.csv` for columns.
+
+To edit column descriptions from R, open the CSV in your editor.
+
+```{r edit-columns, eval=FALSE}
+# Open the column descriptions and save your edits in the same file.
+file.edit(file.path(DB_METADATA_DIRECTORY, "tables_columns.csv"))
+```
+
+Save the CSVs before previewing the changes. Empty and missing descriptions are skipped.
+
+## Preview and apply the changes
+
+Preview the generated SQL through a read-only connection.
+
+```{r preview, eval=FALSE}
+# Generate the comment statements from the edited snapshot.
+comments_sql <- ros_apply_comments(config_file = config_file)
+# Display the statements in the console for review.
+cat(comments_sql, sep = "\n")
+```
+
+Apply the reviewed descriptions with an account that can change comments on the selected database objects.
+
+```{r apply, eval=FALSE}
+# Apply the comment statements in one transaction.
+comments_sql <- ros_apply_comments(apply = TRUE, config_file = config_file)
+# Save the applied statements to a dated SQL file under output/sql.
+comments_file <- ros_save_comments_sql(comments_sql)
+```
+
+## Generate the reports
+
+Pandoc is required. Generation reads the saved snapshot from disk and works offline.
+
+```{r generate, eval=FALSE}
+# Render all domain reports and rebuild the navigation indexes.
+ros_generate_documentation()
+```
+
+Open `output/model/4.0.0/index.html`. See [ROS reports](reports.html) for the dated outputs and one-domain command.

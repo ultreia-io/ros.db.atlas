@@ -1,0 +1,52 @@
+---
+title: "Package resources"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Package resources}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Packaged resources
+
+```{r download, echo=FALSE, results='asis'}
+# Read the installed package version for the archive name.
+resources_version <- as.character(utils::packageVersion("ros.db.atlas"))
+# Show a download link when building the package website.
+if (identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+  cat(sprintf("[Download package resources (%s, ZIP)](../ros.db.atlas-resources-%s.zip).\n\n",
+    resources_version, resources_version))
+}
+# Describe the installed resources included in the archive.
+resources <- data.frame(
+  File = c(
+    "config/ros-db.example.yaml", "config/ros-code-list-urls.csv",
+    "templates/atlas-report.Rmd.tpl", "templates/atlas-report.css", "templates/IOTC_with_text.png"
+  ),
+  Purpose = c(
+    "PostgreSQL connection template with a session password reference.",
+    "URLs for the official IOTC reference tables.",
+    "IOTC HTML report template.",
+    "Report stylesheet.",
+    "IOTC logo used in reports."
+  )
+)
+# Link the raw files on the website, preserving their extensions.
+if (identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+  resources$File <- sprintf(
+    "[`%s`](https://ultreia-io.github.io/ros.db.atlas/%s)", resources$File, resources$File
+  )
+} else {
+  resources$File <- sprintf("`%s`", resources$File)
+}
+# Display the resource inventory.
+knitr::kable(resources, format = "pipe")
+```
+
+## Editable ROS metadata
+
+The tracked snapshot lives under `models/4.0.0/` in the repository.
+
+The schema, table, and column CSVs carry the descriptions. The key CSVs and `dependencies.csv` describe relationships.
+
+Use [Getting started](atlas.html) to update the snapshot and [ROS reports](reports.html) to render it.

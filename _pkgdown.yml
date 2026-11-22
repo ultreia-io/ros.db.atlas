@@ -1,10 +1,9 @@
-url: https://ultreia-io.github.io/ros-schema-atlas/
-
+url: https://ultreia-io.github.io/ros.db.atlas/
 template:
   bootstrap: 5
-
+  light-switch: true
 reference:
-  - title: Session and database connection
+  - title: Database connections
     contents: [ros_password_variable, ros_set_password, connect_to_ros]
   - title: Metadata and comments
     contents: [ros_extract_metadata, ros_apply_comments, ros_save_comments_sql]
@@ -14,3 +13,55 @@ reference:
     contents: [ros_generate_documentation, ros_db_metadata_generate_report, ros_link_to_type, ros_link_to_url]
   - title: Default settings
     contents: [IOTC_ROS, ROS_SCHEMAS, DEFAULT_TIME_STAMP, DB_METADATA_DIRECTORY, DB_REPORT_DIRECTORY, DB_SQL_DIRECTORY, ROS_CODE_LIST_URLS, ros_report_colors]
+  - title: Package
+    contents: [ros.db.atlas-package]
+articles:
+  - title: Guides
+    navbar: Guides
+    contents: [terminology, atlas, reports, resources]
+navbar:
+  structure:
+    left: [intro, reference, articles, news, coverage, community]
+    right: [search, github, lightswitch]
+  components:
+    intro:
+      text: Getting started
+      href: articles/atlas.html
+    articles:
+      text: Articles
+      menu:
+        - text: Terminology
+          href: articles/terminology.html
+        - text: Getting started
+          href: articles/atlas.html
+        - text: ROS reports
+          href: articles/reports.html
+        - text: Package resources
+          href: articles/resources.html
+    coverage:
+      text: Coverage
+      href: https://app.codecov.io/gh/ultreia-io/ros.db.atlas
+    community:
+      text: Community
+      menu:
+        - text: Contributing
+          href: CONTRIBUTING.html
+        - text: Maintainer guide
+          href: DEVELOPMENT.html
+        - text: Security policy
+          href: SECURITY.html
+        - text: Code of conduct
+          href: CODE_OF_CONDUCT.html
+home:
+  sidebar: false
+news:
+  cran_dates: false
+
+footer:
+  structure:
+    left: [company, copyright, license]
+    right: built_with
+  components:
+    company: "[ultreia.io](https://ultreia.io/)"
+    copyright: "· © 2026"
+    license: "· [License: GPL-3](/ros.db.atlas/LICENSE-text.html)"

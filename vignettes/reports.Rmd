@@ -1,0 +1,45 @@
+---
+title: "ROS reports"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ROS reports}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Report domains
+
+ROS reports cover ALL, LL, PS, PL, and GN. Each gear report includes its gear, the shared schemas, and reference tables.
+
+```{r domains}
+# Load the domain definitions.
+library(ros.db.atlas)
+# Inspect which ROS schemas belong to each domain.
+ROS_SCHEMAS
+```
+
+## Generate one domain
+
+Use the tracked metadata snapshot and run this command from the repository root.
+
+```{r render-ll, eval=FALSE}
+# Render the longline report and its dependency graph.
+report_file <- ros_db_metadata_generate_report(domain = "LL")
+# Display the rendered report path.
+report_file
+```
+
+The renderer uses `dependencies.csv` when present to retain the connected reference tables.
+
+## Render all domains and navigation
+
+```{r render-all, eval=FALSE}
+# Render all five domains in a dated directory and update the indexes.
+ros_generate_documentation(date = "2026-09-29")
+```
+
+The report directory is `output/model/4.0.0/2026-09-29/`. Rendering the same date replaces its reports.
+
+The graphs share `graph-assets/`. Keep that directory with the HTML files when moving a dated report directory.
+
+See [Getting started](atlas.html) for editing the snapshot before regeneration.
