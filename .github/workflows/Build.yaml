@@ -1,24 +1,23 @@
 name: Build
 
-# Check development pushes and PRs. Publish Release checks the main merge through workflow_call.
+# Check development changes on Linux. Manual checks and Start Release reuse the full matrix.
 on:
   push:
     branches:
       - develop
       - 'feature/**'
   pull_request:
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: Git branch, tag, or commit to build
-        required: false
-        type: string
   workflow_call:
     inputs:
       ref:
         description: Git branch, tag, or commit to build
-        required: false
         type: string
+      all_platforms:
+        description: Check all four supported R environments
+        type: boolean
+      release:
+        description: Save the checked Linux source archive for publication
+        type: boolean
 
 # Package verification reads sources and dependencies; it does not publish or modify the repository.
 permissions:
@@ -26,6 +25,12 @@ permissions:
 
 jobs:
   check:
+    # Same-repository development branches already run on push. Release PRs are checked before opening.
+    if: >-
+      github.event_name != 'pull_request' ||
+      !(github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.head_ref == 'develop' || startsWith(github.head_ref, 'feature/') ||
+          startsWith(github.head_ref, 'release/')))
     name: ${{ matrix.config.os }} (${{ matrix.config.r }})
     runs-on: ${{ matrix.config.os }}
     # Linux release: R is preinstalled in Rocker; setup-r installs R-devel on the Ubuntu runner.
@@ -40,19 +45,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - os: ubuntu-latest
-            r: release
-            container: rocker/r-ver:latest
-          - os: macos-latest
-            r: release
-            container: ""
-          - os: windows-latest
-            r: release
-            container: ""
-          - os: ubuntu-latest
-            r: devel
-            container: ""
+        config: >-
+          ${{ fromJSON(inputs.all_platforms && '[
+            {"os":"ubuntu-latest","r":"release","container":"rocker/r-ver:latest"},
+            {"os":"ubuntu-latest","r":"devel","container":""},
+            {"os":"macos-latest","r":"release","container":""},
+            {"os":"windows-latest","r":"release","container":""}
+          ]' || '[{"os":"ubuntu-latest","r":"release","container":"rocker/r-ver:latest"}]') }}
 
     env:
       # Use the runner's Homebrew metadata without updating or cleaning unrelated tools.
@@ -214,15 +213,38 @@ jobs:
           covr::to_cobertura(coverage_result, filename = "coverage.xml")
 
       - name: Upload coverage to Codecov
-        if: success() && runner.os == 'Linux' && matrix.config.r == 'release' && env.CODECOV_TOKEN != ''
+        if: success() && runner.os == 'Linux' && matrix.config.r == 'release' && env.CODECOV_TOKEN != '' && !inputs.release
         uses: codecov/codecov-action@v7.1.1
         with:
           token: ${{ env.CODECOV_TOKEN }}
-          slug: ultreia-io/ros.db.atlas
-          # Publish Release passes the merge SHA as ref. REST checkout may omit the commit output.
-          override_commit: ${{ github.event.pull_request.merged == true && inputs.ref || steps.checkout.outputs.commit }}
-          override_branch: ${{ github.event.pull_request.merged == true && github.event.pull_request.base.ref || '' }}
+          slug: ${{ github.repository }}
+          override_commit: ${{ steps.checkout.outputs.commit }}
           files: coverage.xml
           plugins: noop
           disable_search: true
           fail_ci_if_error: true
+
+      - name: Prepare the checked archive and coverage report
+        if: inputs.release && runner.os == 'Linux' && matrix.config.r == 'release'
+        working-directory: build
+        run: |
+          shopt -s nullglob
+          archives=(*.tar.gz)
+          if [[ ${#archives[@]} != 1 ]]; then
+            echo '::error::Expected exactly one checked source archive.'
+            exit 1
+          fi
+          sha256sum "${archives[0]}" > SHA256SUMS
+          cp ../coverage.xml .
+
+      - name: Save the checked release files
+        if: inputs.release && runner.os == 'Linux' && matrix.config.r == 'release'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: checked-release
+          path: |
+            build/*.tar.gz
+            build/SHA256SUMS
+            build/coverage.xml
+          if-no-files-found: error
+          overwrite: true
